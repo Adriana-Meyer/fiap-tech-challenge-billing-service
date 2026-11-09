@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/billing_db
+    username: billing
+    password: billing123
+
+logging:
+  level:
+    com.fiap.workshop: INFO
