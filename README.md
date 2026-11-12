@@ -12,7 +12,7 @@ Faz parte do sistema de gestão de oficina mecânica, que na Fase 4 foi dividido
 | `fiap-tech-challenge-os-service` | Serviço de OS (orquestrador da saga) |
 | `fiap-tech-challenge-os-infrastructure` | VPC, EKS compartilhado, New Relic e tópico SNS |
 
-> **Estado atual:** esqueleto do serviço com o domínio, os casos de uso, a persistência, o gateway de pagamento mock e a consulta REST. Os **handlers de comandos da saga (SQS)** e a publicação das respostas (SNS) entram no próximo PR; até lá, os casos de uso só são exercitados pelos testes.
+> **Estado atual:** o serviço executa os comandos da saga que chegam pela fila SQS `billing-commands` e responde pelo tópico SNS `saga-events` (seção "Mensageria").
 
 ## Responsabilidade
 
@@ -33,6 +33,28 @@ Regras de consistência:
 - **Idempotência:** `ProcessPayment` devolve o pagamento existente (aprovado ou recusado) em vez de cobrar de novo, e `RefundPayment` repetido não estorna duas vezes. Isso torna seguro o reenvio de mensagens SQS.
 - **Recusa não é erro:** o gateway recusar uma cobrança gera um `Payment` com status `DECLINED`, que a saga usa para disparar as compensações.
 - Orçamento pago não pode ser cancelado nem regenerado; o caminho é o estorno. Esses casos viram `409 Conflict`.
+
+## Mensageria
+
+Comandos chegam pela fila `billing-commands`; as respostas saem para o tópico `saga-events`, que alimenta a fila do OS. Todas as mensagens usam o mesmo envelope JSON:
+
+```json
+{ "messageId": "…", "sagaId": "…", "serviceOrderId": "…", "type": "GenerateBudget", "payload": { … } }
+```
+
+| Comando recebido (`type`) | `payload` | Resposta publicada |
+|---|---|---|
+| `GenerateBudget` | `items: [{ description, unitPrice, quantity }]` | `BudgetGenerated` `{ totalAmount }` |
+| `ProcessPayment` | `paymentMethod` | `PaymentApproved`, ou `PaymentDeclined` `{ reason }` |
+| `CancelBudget` | (vazio) | `BudgetCancelled` |
+| `RefundPayment` | (vazio) | `PaymentRefunded` |
+
+- **Recusa não é falha:** `PaymentDeclined` é uma resposta normal; é ela que faz o OS disparar as compensações.
+- **Reentrega segura:** os casos de uso são idempotentes, e o `messageId` da resposta é derivado do `messageId` do comando. Se o comando chega duas vezes, o OS recebe duas respostas com o mesmo id e descarta a repetida.
+- **Falha vai para a DLQ:** se o comando não pode ser tratado (JSON inválido, tipo desconhecido, orçamento inexistente), a mensagem não é confirmada; o SQS a reentrega e, ao passar do máximo de tentativas da fila, a move para `billing-commands-dlq`.
+- **Filas são do Terraform:** o serviço não cria filas. Se `billing-commands` não existir, ele falha na subida, o que denuncia um `billing-infrastructure` não aplicado.
+- Variáveis: `COMMANDS_QUEUE` (padrão `billing-commands`), `EVENTS_TOPIC_ARN` (ARN do tópico; o `deploy-aws.yml` monta a partir da conta e da região), `MESSAGING_ENABLED` (`false` desliga o listener, usado no `docker compose` isolado e em testes que não usam filas).
+- Sem outbox: a resposta é publicada depois de gravar. Se a publicação falha, o comando volta para a fila e é refeito, e a idempotência garante que nada é cobrado duas vezes.
 
 ## Arquitetura
 
@@ -72,10 +94,10 @@ A API HTTP é **somente de consulta**: orçamentos e pagamentos são criados e a
 ## Como rodar localmente
 
 ```bash
-docker compose up --build        # PostgreSQL + serviço em http://localhost:8082
+docker compose up --build        # PostgreSQL + serviço em http://localhost:8082 (sem filas)
 ```
 
-Para chamar a API é preciso um JWT assinado com o mesmo `JWT_SECRET`, contendo a claim `role`. Enquanto o OS Service não emitir essa claim, gere um token de teste (o segredo de desenvolvimento está em `application.yml`). Sem os handlers SQS ainda não há como criar um orçamento fora dos testes.
+Para chamar a API é preciso um JWT assinado com o mesmo `JWT_SECRET`, contendo a claim `role`. Enquanto o OS Service não emitir essa claim, gere um token de teste (o segredo de desenvolvimento está em `application.yml`). Sem as filas (`MESSAGING_ENABLED=false` neste compose) não há como criar um orçamento; o ambiente completo com LocalStack fica no repositório do OS.
 
 ## Testes e qualidade
 
@@ -85,6 +107,7 @@ mvn verify        # testes unitários + integração (Testcontainers/PostgreSQL,
 
 - Cobertura atual: ~97% de instruções (gate do build: 80%). Relatório em `target/site/jacoco/`.
 - `ArchitectureTest` falha o build se uma camada violar a regra de dependência.
+- `SagaMessagingIntegrationTest` roda o serviço contra SQS e SNS reais (LocalStack) e PostgreSQL: fluxo completo, recusa, estorno, comando repetido e mensagem que vai para a DLQ.
 - `BillingApiIntegrationTest` sobe o serviço inteiro contra um PostgreSQL real (migrations, segurança, casos de uso e REST juntos) e cobre o fluxo completo: gerar orçamento, pagar, recusar, estornar e regenerar.
 - Análise estática e quality gate no **SonarQube Cloud** (step do CI, ativo quando o secret `SONAR_TOKEN` existe).
 

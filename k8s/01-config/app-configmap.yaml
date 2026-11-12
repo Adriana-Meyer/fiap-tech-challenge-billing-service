@@ -5,6 +5,9 @@ metadata:
   namespace: billing
 data:
   SPRING_PROFILES_ACTIVE: docker
+  AWS_REGION: us-east-1
+  # Created by billing-infrastructure (queue + DLQ). EVENTS_TOPIC_ARN is added by deploy-aws.yml.
+  COMMANDS_QUEUE: billing-commands
   NEW_RELIC_APP_NAME: workshop-billing-service
   NEW_RELIC_LOG: STDOUT
   NEW_RELIC_APPLICATION_LOGGING_ENABLED: "true"
