@@ -13,7 +13,8 @@ name: Deploy to AWS (EKS)
 # Expects the cluster (os-infrastructure) and the `billing` namespace
 # (billing-infrastructure) to already exist, and the database
 # (billing-database-infrastructure) to have pushed its connection secrets
-# to this repository.
+# to this repository. The commands queue (billing-commands) comes from
+# billing-infrastructure and the saga-events topic from os-infrastructure.
 on:
   workflow_dispatch:
     inputs:
@@ -72,6 +73,14 @@ jobs:
 
       - name: Apply app config
         run: kubectl apply -f k8s/01-config/app-configmap.yaml
+
+      # The topic belongs to os-infrastructure; its ARN is fixed by account, region and name.
+      - name: Point the service at the saga-events topic
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          TOPIC_ARN="arn:aws:sns:${AWS_REGION}:${ACCOUNT_ID}:saga-events"
+          kubectl patch configmap app-config -n "$NAMESPACE" --type merge \
+            -p "{\"data\":{\"EVENTS_TOPIC_ARN\":\"${TOPIC_ARN}\"}}"
 
       - name: Create/update app secret (RDS connection, JWT, New Relic)
         run: |

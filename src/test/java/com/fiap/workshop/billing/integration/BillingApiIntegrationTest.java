@@ -40,7 +40,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "app.jwt.secret=" + JwtTestTokens.SECRET,
-        "app.payment.mock.decline-above=1000.00"
+        "app.payment.mock.decline-above=1000.00",
+        "app.messaging.enabled=false"
 })
 @DisplayName("Billing API (integration)")
 class BillingApiIntegrationTest {

@@ -7,6 +7,11 @@ spring:
     # is no user store, so Boot must not generate a default in-memory user.
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:us-east-1}
+
   datasource:
     url: jdbc:postgresql://localhost:5432/billing_db
     username: billing
@@ -27,6 +32,13 @@ app:
   jwt:
     # Same HS256 secret as the OS service, which issues the tokens.
     secret: ${JWT_SECRET:dev-only-secret-must-be-at-least-64-characters-long-for-hs512-ok}
+
+  messaging:
+    # Off in tests that do not exercise the queues: the listener connects to SQS when the app starts.
+    enabled: ${MESSAGING_ENABLED:true}
+    commands-queue: ${COMMANDS_QUEUE:billing-commands}
+    # ARN of the saga-events topic (os-infrastructure); the answers to the OS service go there.
+    events-topic-arn: ${EVENTS_TOPIC_ARN:}
 
   payment:
     mock:

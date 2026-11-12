@@ -25,6 +25,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JWT_SECRET: ${JWT_SECRET:-dev-only-secret-must-be-at-least-64-characters-long-for-hs512-ok}
+      # Standalone run: no SQS/SNS here. The full local environment (LocalStack) lives in the OS repository.
+      MESSAGING_ENABLED: "false"
       # Local runs have no New Relic account: keep the agent from retrying.
       NEW_RELIC_ENABLED: "false"
     depends_on:
