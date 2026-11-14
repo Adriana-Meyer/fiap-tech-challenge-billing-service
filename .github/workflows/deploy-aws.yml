@@ -83,22 +83,31 @@ jobs:
             -p "{\"data\":{\"EVENTS_TOPIC_ARN\":\"${TOPIC_ARN}\"}}"
 
       - name: Create/update app secret (RDS connection, JWT, New Relic)
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
+          RDS_DATASOURCE_URL: ${{ secrets.RDS_DATASOURCE_URL }}
+          RDS_PASSWORD: ${{ secrets.RDS_PASSWORD }}
+          RDS_USERNAME: ${{ secrets.RDS_USERNAME }}
         run: |
           kubectl create secret generic app-secret \
             --namespace "$NAMESPACE" \
-            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-            --from-literal=SPRING_DATASOURCE_URL="${{ secrets.RDS_DATASOURCE_URL }}" \
-            --from-literal=SPRING_DATASOURCE_USERNAME="${{ secrets.RDS_USERNAME }}" \
-            --from-literal=SPRING_DATASOURCE_PASSWORD="${{ secrets.RDS_PASSWORD }}" \
-            --from-literal=NEW_RELIC_LICENSE_KEY="${{ secrets.NEW_RELIC_LICENSE_KEY }}" \
+            --from-literal=JWT_SECRET="$JWT_SECRET" \
+            --from-literal=SPRING_DATASOURCE_URL="$RDS_DATASOURCE_URL" \
+            --from-literal=SPRING_DATASOURCE_USERNAME="$RDS_USERNAME" \
+            --from-literal=SPRING_DATASOURCE_PASSWORD="$RDS_PASSWORD" \
+            --from-literal=NEW_RELIC_LICENSE_KEY="$NEW_RELIC_LICENSE_KEY" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create/update Docker Hub image pull secret
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           kubectl create secret docker-registry dockerhub-secret \
             --namespace "$NAMESPACE" \
-            --docker-username="${{ secrets.DOCKERHUB_USERNAME }}" \
-            --docker-password="${{ secrets.DOCKERHUB_TOKEN }}" \
+            --docker-username="$DOCKERHUB_USERNAME" \
+            --docker-password="$DOCKERHUB_TOKEN" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy service
