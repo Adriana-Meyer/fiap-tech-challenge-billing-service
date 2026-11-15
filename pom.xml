@@ -15,7 +15,7 @@
     <artifactId>billing</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <name>workshop-billing-service</name>
-    <description>FIAP Tech Challenge - Phase 4 - Billing microservice (budgets and payments)</description>
+    <description>FIAP Tech Challenge - Billing microservice (budgets and payments)</description>
 
     <properties>
         <java.version>17</java.version>
