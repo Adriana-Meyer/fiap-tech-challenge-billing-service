@@ -1,8 +1,8 @@
 # fiap-tech-challenge-billing-service
 
-Microsserviço de **Cobrança** (orçamento e pagamento) do Tech Challenge — FIAP Pós-Tech, Arquitetura de Software, turma 15SOAT, **Fase 4** (microsserviços + Saga).
+Microsserviço de **Cobrança** (orçamento e pagamento) do Tech Challenge — FIAP Pós-Tech, Arquitetura de Software, turma 15SOAT.
 
-Faz parte do sistema de gestão de oficina mecânica, que na Fase 4 foi dividido em quatro serviços independentes (OS, Billing, Execution e Inventory). Cada serviço tem repositório, infraestrutura e banco próprios.
+Faz parte do sistema de gestão de oficina mecânica, que é dividido em quatro serviços independentes (OS, Billing, Execution e Inventory). Cada serviço tem repositório, infraestrutura e banco próprios.
 
 | Repositório | Papel |
 |---|---|

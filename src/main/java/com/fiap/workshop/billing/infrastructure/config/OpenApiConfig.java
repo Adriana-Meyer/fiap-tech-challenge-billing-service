@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
         info = @Info(
                 title = "Workshop Billing API",
                 version = "1.0.0",
-                description = "Microsserviço de Estoque (peças e insumos) — FIAP Tech Challenge Fase 4"
+                description = "Microsserviço de Cobrança (orçamento e pagamento) — FIAP Tech Challenge"
         ),
         servers = @Server(url = "/", description = "Default server"),
         security = @SecurityRequirement(name = "bearerAuth")
